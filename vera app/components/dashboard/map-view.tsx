@@ -35,9 +35,11 @@ import {
   formatMissionStatus,
   hasHomeLowBatteryAlert,
   needsCharging,
+  parseCoordinate,
   type VellaDrone,
   type VellaMission,
 } from '@/lib/vella'
+
 
 // ─── BASEMAP CONFIGURATION ───────────────────────────────────────────────────
 
@@ -141,7 +143,8 @@ function createTacticalDroneIcon(
   showLabels: boolean
 ) {
   const telemetry = drone.telemetry
-  const name = (drone.metadata?.drone_name || drone.drone_id).replace(/[<>&"']/g, '')
+  const name = ((drone as any).drone_name || drone.metadata?.drone_name || drone.drone_id).replace(/[<>&"']/g, '')
+
   const heading =
     typeof telemetry?.heading_deg === 'number' && Number.isFinite(telemetry.heading_deg)
       ? Math.round(telemetry.heading_deg)
@@ -370,8 +373,9 @@ function MapCameraController({
       return
     }
 
-    if (selectedMission?.pickup && selectedMission?.dropoff) {
-      const [p, d] = [selectedMission.pickup, selectedMission.dropoff]
+    const p = parseCoordinate(selectedMission?.pickup as any)
+    const d = parseCoordinate(selectedMission?.dropoff as any)
+    if (p && d) {
       map.fitBounds(
         [
           [p[0], p[1]],
@@ -381,6 +385,7 @@ function MapCameraController({
       )
     }
   }, [map, focusCoords, selectedMission?.mission_id, selectedDronePos, cameraMode])
+
 
   return null
 }
@@ -551,74 +556,81 @@ export function MapView({
           })}
 
         {/* ─── Mission Corridors & Waypoint Beacons ──────────────────────── */}
-        {showFlightCorridors && selectedMission?.pickup && selectedMission?.dropoff && (
-          <>
-            {/* Glowing Underlay */}
-            <Polyline
-              positions={[
-                [selectedMission.pickup[0], selectedMission.pickup[1]],
-                [selectedMission.dropoff[0], selectedMission.dropoff[1]],
-              ]}
-              pathOptions={{
-                color: '#06b6d4',
-                weight: 6,
-                opacity: 0.22,
-              }}
-            />
-            {/* Main Animated Vector Line */}
-            <Polyline
-              positions={[
-                [selectedMission.pickup[0], selectedMission.pickup[1]],
-                [selectedMission.dropoff[0], selectedMission.dropoff[1]],
-              ]}
-              pathOptions={{
-                color: '#e7edf0',
-                weight: 2.2,
-                dashArray: '8 6',
-                opacity: 0.9,
-              }}
-            />
-            {/* Launch Waypoint */}
-            <Marker
-              position={[selectedMission.pickup[0], selectedMission.pickup[1]]}
-              icon={launchDepotIcon}
-            >
-              <Popup>
-                <div className="p-2 font-mono text-xs">
-                  <div className="font-bold text-emerald-400">LAUNCH POINT (DEP)</div>
-                  <div className="mt-1 text-zinc-300">
-                    {selectedMission.pickup[0].toFixed(5)}, {selectedMission.pickup[1].toFixed(5)}
+        {showFlightCorridors && (() => {
+          const p = parseCoordinate(selectedMission?.pickup as any)
+          const d = parseCoordinate(selectedMission?.dropoff as any)
+          if (!p || !d) return null
+          return (
+            <>
+              {/* Glowing Underlay */}
+              <Polyline
+                positions={[
+                  [p[0], p[1]],
+                  [d[0], d[1]],
+                ]}
+                pathOptions={{
+                  color: '#06b6d4',
+                  weight: 6,
+                  opacity: 0.22,
+                }}
+              />
+              {/* Main Animated Vector Line */}
+              <Polyline
+                positions={[
+                  [p[0], p[1]],
+                  [d[0], d[1]],
+                ]}
+                pathOptions={{
+                  color: '#e7edf0',
+                  weight: 2.2,
+                  dashArray: '8 6',
+                  opacity: 0.9,
+                }}
+              />
+              {/* Launch Waypoint */}
+              <Marker
+                position={[p[0], p[1]]}
+                icon={launchDepotIcon}
+              >
+                <Popup>
+                  <div className="p-2 font-mono text-xs">
+                    <div className="font-bold text-emerald-400">LAUNCH POINT (DEP)</div>
+                    <div className="mt-1 text-zinc-300">
+                      {p[0].toFixed(5)}, {p[1].toFixed(5)}
+                    </div>
+                    <div className="mt-1 text-[10px] text-zinc-400">
+                      Mission: {selectedMission?.mission_id}
+                    </div>
                   </div>
-                  <div className="mt-1 text-[10px] text-zinc-400">
-                    Mission: {selectedMission.mission_id}
+                </Popup>
+              </Marker>
+              {/* Delivery Target Waypoint */}
+              <Marker
+                position={[d[0], d[1]]}
+                icon={dropoffTargetIcon}
+              >
+                <Popup>
+                  <div className="p-2 font-mono text-xs">
+                    <div className="font-bold text-rose-400">DELIVERY TARGET (ARR)</div>
+                    <div className="mt-1 text-zinc-300">
+                      {d[0].toFixed(5)}, {d[1].toFixed(5)}
+                    </div>
+                    <div className="mt-1 text-[10px] text-zinc-400">
+                      Payload: {selectedMission?.payload_weight_kg ?? 0.5} kg
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-            {/* Delivery Target Waypoint */}
-            <Marker
-              position={[selectedMission.dropoff[0], selectedMission.dropoff[1]]}
-              icon={dropoffTargetIcon}
-            >
-              <Popup>
-                <div className="p-2 font-mono text-xs">
-                  <div className="font-bold text-rose-400">DELIVERY TARGET (ARR)</div>
-                  <div className="mt-1 text-zinc-300">
-                    {selectedMission.dropoff[0].toFixed(5)}, {selectedMission.dropoff[1].toFixed(5)}
-                  </div>
-                  <div className="mt-1 text-[10px] text-zinc-400">
-                    Payload: {selectedMission.payload_weight_kg ?? 0.5} kg
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          </>
-        )}
+                </Popup>
+              </Marker>
+            </>
+          )
+        })()}
+
 
         {/* ─── Live Aircraft Markers & Tactical Popups ───────────────────── */}
         {visibleDrones.map(({ drone, position }) => {
           const telemetry = drone.telemetry!
-          const name = drone.metadata?.drone_name || drone.drone_id
+          const name = (drone as any).drone_name || drone.metadata?.drone_name || drone.drone_id
+
           const isSelected = drone.drone_id === selectedDroneId
           const batt = telemetry.battery_pct ?? 0
 

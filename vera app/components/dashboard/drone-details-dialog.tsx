@@ -5,7 +5,9 @@ import { formatMissionStatus, type VellaDrone, type VellaMission } from '@/lib/v
 
 type Props = { drone: VellaDrone | null; mission: VellaMission | null; onClose: () => void }
 
-function displayName(drone: VellaDrone) { return drone.metadata?.drone_name || drone.drone_id }
+function displayName(drone: VellaDrone) {
+  return (drone as any).drone_name || drone.metadata?.drone_name || drone.drone_id
+}
 function value(value: string | number | null | undefined, suffix = '') { return value === null || value === undefined || value === '' ? '—' : `${value}${suffix}` }
 
 export function DroneDetailsDialog({ drone, mission, onClose }: Props) {

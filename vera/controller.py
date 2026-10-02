@@ -459,6 +459,14 @@ class VeraController:
             "autopilot_time_usec": self.telemetry.autopilot_time_usec,
         }
 
+    def telemetry_stream_payload(self):
+        active = self.store.active()
+        payload = dict(self._telemetry_dict())
+        payload["mission_state"] = active["status"] if active else None
+        payload["current_mission_id"] = active["mission_id"] if active else None
+        return payload
+
+
     def _verify_arrival(self, request):
         state = self._report_telemetry(request.mission_id)
         position = self._last_navigation_position or (state.latitude, state.longitude)

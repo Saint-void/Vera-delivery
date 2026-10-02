@@ -24,6 +24,7 @@ import {
   formatMissionStatus,
   hasHomeLowBatteryAlert,
   needsCharging,
+  parseCoordinate,
   sendDroneCommand,
   type VellaDrone,
   type VellaMission,
@@ -38,8 +39,9 @@ type Props = {
 }
 
 function droneName(drone: VellaDrone) {
-  return drone.metadata?.drone_name || drone.drone_id
+  return (drone as any).drone_name || drone.metadata?.drone_name || drone.drone_id
 }
+
 
 export function AircraftInspector({
   drone,
@@ -310,8 +312,14 @@ export function AircraftInspector({
                 <div className="space-y-1 font-mono text-[11px] text-muted-foreground">
                   <p>Payload: {mission.payload_weight_kg} kg</p>
                   <p>
-                    Drop-off: {mission.dropoff[0].toFixed(5)}, {mission.dropoff[1].toFixed(5)} ({mission.dropoff[2]}m)
+                    {(() => {
+                      const d = parseCoordinate(mission.dropoff as any)
+                      return d
+                        ? `Drop-off: ${d[0].toFixed(5)}, ${d[1].toFixed(5)} (${d[2]}m)`
+                        : 'Drop-off: Not configured'
+                    })()}
                   </p>
+
                 </div>
               </div>
             ) : (

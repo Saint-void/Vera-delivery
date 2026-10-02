@@ -8,7 +8,10 @@ import { LocationPickerClient } from './location-picker-client'
 type Props = { open: boolean; availableDrones: VellaDrone[]; initialDroneId?: string | null; onClose: () => void; onCreated: (mission: VellaMission) => void }
 const steps = ['Aircraft', 'Drop-off', 'Review']
 
-function droneName(drone: Pick<VellaDrone, 'drone_id' | 'metadata'>) { return drone.metadata?.drone_name || drone.drone_id }
+function droneName(drone: Pick<VellaDrone, 'drone_id' | 'metadata'> | any) {
+  return (drone as any).drone_name || drone.metadata?.drone_name || drone.drone_id
+}
+
 
 export function AddMissionDialog({ open, availableDrones, initialDroneId = null, onClose, onCreated }: Props) {
   const [step, setStep] = useState(0)

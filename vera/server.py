@@ -8,6 +8,7 @@ from vera.config import VERA_HOST, VERA_PORT
 from vera.controller import VeraController
 from vera.mission_request import MissionRequest, MissionValidationError
 from vera.registration import VellaRegistrar
+from vera.telemetry_client import VellaTelemetryClient
 
 
 class VeraRequestHandler(BaseHTTPRequestHandler):
@@ -65,19 +66,22 @@ class VeraRequestHandler(BaseHTTPRequestHandler):
             return self._send(500, {"detail": str(exc)})
 
 
-def serve(controller=None, host=VERA_HOST, port=VERA_PORT, registrar=None):
+def serve(controller=None, host=VERA_HOST, port=VERA_PORT, registrar=None, telemetry_client=None):
     controller = controller or VeraController()
     controller.start()
     server = create_server(controller, host, port)
     print("Vera independent process listening on http://%s:%s" % (host, server.server_port))
     registrar = registrar or VellaRegistrar(controller)
     registrar.start()
+    telemetry_client = telemetry_client or VellaTelemetryClient(controller)
+    telemetry_client.start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
         server.shutdown()
+        telemetry_client.stop()
         registrar.stop()
         controller.stop()
 

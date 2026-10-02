@@ -37,8 +37,9 @@ type MissionRailProps = {
 }
 
 function droneName(drone: VellaDrone) {
-  return drone.metadata?.drone_name || drone.drone_id
+  return (drone as any).drone_name || drone.metadata?.drone_name || drone.drone_id
 }
+
 
 export function MissionRail({
   missions,

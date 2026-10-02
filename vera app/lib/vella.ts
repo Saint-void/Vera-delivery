@@ -4,6 +4,21 @@ export type Coordinate = {
   alt: number
 }
 
+export type CoordinateObject = {
+  lat: number
+  lon?: number
+  lng?: number
+  alt?: number
+}
+
+export type CoordinateTuple = [number, number, number?]
+
+export type RawCoordinate =
+  | CoordinateTuple
+  | CoordinateObject
+  | null
+  | undefined
+
 export type MapPoint = {
   lat: number
   lng: number
@@ -30,11 +45,12 @@ export type VellaTelemetry = {
 
 export type VellaDrone = {
   drone_id: string
+  drone_name?: string
   base_url: string
   status: 'available' | 'busy' | 'offline' | 'landed' | 'returning' | 'error' | string
   connected: boolean
   current_mission_id?: string | null
-  home_position?: [number, number, number] | null
+  home_position?: [number, number, number] | CoordinateObject | null
   metadata?: { drone_name?: string } | null
   telemetry?: VellaTelemetry | null
   last_seen_at?: string | null
@@ -43,8 +59,8 @@ export type VellaDrone = {
 
 export type VellaMission = {
   mission_id: string
-  pickup: [number, number, number]
-  dropoff: [number, number, number]
+  pickup: [number, number, number] | CoordinateObject
+  dropoff: [number, number, number] | CoordinateObject
   payload_weight_kg: number
   status: string
   drone_id?: string | null
@@ -85,12 +101,63 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+/**
+ * Normalizes coordinate input from either array [lat, lon, alt] or object {lat, lon/lng, alt}
+ * to a standard tuple [lat, lng, alt]. Returns null if coordinate is invalid or missing.
+ */
+export function parseCoordinate(coordinate: RawCoordinate): [number, number, number] | null {
+  if (!coordinate) return null
+  if (Array.isArray(coordinate)) {
+    if (coordinate.length < 2) return null
+    const [lat, lng, alt = 0] = coordinate
+    if (typeof lat !== 'number' || typeof lng !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return null
+    }
+    return [lat, lng, typeof alt === 'number' && Number.isFinite(alt) ? alt : 0]
+  }
+  if (typeof coordinate === 'object') {
+    const lat = coordinate.lat
+    const lng = coordinate.lon !== undefined ? coordinate.lon : coordinate.lng
+    const alt = coordinate.alt !== undefined ? coordinate.alt : 0
+    if (typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng)) {
+      return [lat, lng, typeof alt === 'number' && Number.isFinite(alt) ? alt : 0]
+    }
+  }
+  return null
+}
+
+/**
+ * Normalizes coordinate to {lat, lng, alt} object format.
+ */
+export function parseCoordinateObject(coordinate: RawCoordinate): Coordinate | null {
+  const parsed = parseCoordinate(coordinate)
+  if (!parsed) return null
+  return { lat: parsed[0], lng: parsed[1], alt: parsed[2] }
+}
+
+export function droneDisplayName(drone: Partial<VellaDrone> | null | undefined): string {
+  if (!drone) return 'Unknown'
+  return (drone as any).drone_name || drone.metadata?.drone_name || drone.drone_id || 'Unknown'
+}
+
 export async function getFleetSnapshot(): Promise<FleetSnapshot> {
   const [drones, missions] = await Promise.all([
     request<VellaDrone[]>('/drones'),
     request<VellaMission[]>('/missions'),
   ])
-  return { drones: deduplicateDrones(drones), missions }
+
+  const normalizedDrones = deduplicateDrones(drones).map((drone) => ({
+    ...drone,
+    home_position: parseCoordinate(drone.home_position) || drone.home_position,
+  }))
+
+  const normalizedMissions = missions.map((mission) => ({
+    ...mission,
+    pickup: parseCoordinate(mission.pickup) || mission.pickup,
+    dropoff: parseCoordinate(mission.dropoff) || mission.dropoff,
+  }))
+
+  return { drones: normalizedDrones, missions: normalizedMissions }
 }
 
 function registeredAt(drone: VellaDrone) {
@@ -103,8 +170,8 @@ export function deduplicateDrones(drones: VellaDrone[]) {
   for (const drone of drones) {
     const endpoint = drone.base_url?.replace(/\/$/, '').toLowerCase() || `id:${drone.drone_id}`
     const current = unique.get(endpoint)
-    const currentHasName = Boolean(current?.metadata?.drone_name)
-    const candidateHasName = Boolean(drone.metadata?.drone_name)
+    const currentHasName = Boolean((current as any)?.drone_name || current?.metadata?.drone_name)
+    const candidateHasName = Boolean((drone as any)?.drone_name || drone.metadata?.drone_name)
     const preferCandidate = !current || (candidateHasName && !currentHasName) || (candidateHasName === currentHasName && registeredAt(drone) > registeredAt(current))
     if (preferCandidate) unique.set(endpoint, drone)
   }
@@ -137,15 +204,26 @@ export async function sendDroneCommand(droneId: string, command: 'rtl' | 'cancel
   })
 }
 
-export function asMapPoint(coordinate: [number, number, number] | null | undefined, fallback = 'Unknown location'): MapPoint | null {
-  if (!coordinate || coordinate.length < 2) return null
-  const [lat, lng] = coordinate
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-  return { lat, lng, label: fallback }
+export function asMapPoint(
+  coordinate: RawCoordinate,
+  fallback = 'Unknown location'
+): MapPoint | null {
+  const parsed = parseCoordinate(coordinate)
+  if (!parsed) return null
+  return { lat: parsed[0], lng: parsed[1], label: fallback }
 }
 
-export function formatCoordinate(point: Pick<MapPoint, 'lat' | 'lng'> | null | undefined) {
-  return point ? `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}` : 'No location'
+export function formatCoordinate(point: Pick<MapPoint, 'lat' | 'lng'> | RawCoordinate | null | undefined) {
+  if (!point) return 'No location'
+  if ('lat' in (point as object)) {
+    const p = point as { lat: number; lng?: number; lon?: number }
+    const lng = p.lng !== undefined ? p.lng : p.lon
+    if (typeof p.lat === 'number' && typeof lng === 'number' && Number.isFinite(p.lat) && Number.isFinite(lng)) {
+      return `${p.lat.toFixed(5)}, ${lng.toFixed(5)}`
+    }
+  }
+  const parsed = parseCoordinate(point as RawCoordinate)
+  return parsed ? `${parsed[0].toFixed(5)}, ${parsed[1].toFixed(5)}` : 'No location'
 }
 
 export function formatMissionStatus(status: string) {
@@ -174,7 +252,7 @@ function distanceBetweenMeters(first: [number, number], second: [number, number]
 }
 
 export function isAtHome(drone: VellaDrone) {
-  const home = drone.home_position
+  const home = parseCoordinate(drone.home_position as any)
   const latitude = drone.telemetry?.latitude
   const longitude = drone.telemetry?.longitude
   if (!home || typeof latitude !== 'number' || typeof longitude !== 'number') return false

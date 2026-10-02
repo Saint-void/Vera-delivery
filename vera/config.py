@@ -62,9 +62,28 @@ VERA_HOME_POSITION = _optional_position(os.getenv("VERA_HOME_POSITION", ""))
 # Leaving VELLA_BASE_URL empty deliberately disables registration.  It never
 # affects local MAVLink control or the Vera HTTP API.
 VELLA_BASE_URL = os.getenv("VELLA_BASE_URL", "").rstrip("/")
+VELLA_HOST = os.getenv("VELLA_HOST", "")
+VELLA_PORT = os.getenv("VELLA_PORT", "")
+VELLA_WS_URL = os.getenv("VELLA_WS_URL", "")
 VELLA_REGISTRATION_PATH = os.getenv("VELLA_REGISTRATION_PATH", "/drones")
 VELLA_REGISTRATION_INTERVAL_S = float(os.getenv("VELLA_REGISTRATION_INTERVAL_S", "15"))
 VELLA_REGISTRATION_TIMEOUT_S = float(os.getenv("VELLA_REGISTRATION_TIMEOUT_S", "3"))
+
+
+def get_vella_ws_url():
+    """Resolve the WebSocket telemetry endpoint for Vella."""
+    if VELLA_WS_URL:
+        return VELLA_WS_URL
+    if VELLA_HOST:
+        port_suffix = f":{VELLA_PORT}" if VELLA_PORT else ""
+        return f"ws://{VELLA_HOST}{port_suffix}/ws/telemetry/{VERA_DRONE_ID}"
+    if VELLA_BASE_URL:
+        from urllib.parse import urlparse
+        parsed = urlparse(VELLA_BASE_URL)
+        scheme = "wss" if parsed.scheme == "https" else "ws"
+        return f"{scheme}://{parsed.netloc}/ws/telemetry/{VERA_DRONE_ID}"
+    return None
+
 VERA_STATE_DB = os.getenv(
     "VERA_STATE_DB",
     os.path.join(os.path.dirname(__file__), "db", "vera.sqlite3"),
