@@ -39,13 +39,52 @@ class MissionRequest:
 
     @classmethod
     def from_dict(cls, value):
+        if not isinstance(value, dict):
+            raise MissionValidationError("Mission request body must be a JSON object")
+
+        def _parse_coord(raw, name):
+            if raw is None:
+                return None
+            if isinstance(raw, (list, tuple)):
+                if len(raw) < 2:
+                    raise MissionValidationError(f"{name} must have at least latitude and longitude")
+                lat = float(raw[0])
+                lon = float(raw[1])
+                alt = float(raw[2]) if len(raw) > 2 else 20.0
+                return (lat, lon, alt)
+            if isinstance(raw, dict):
+                lat = float(raw.get("lat", 0.0))
+                lon = float(raw.get("lon", raw.get("lng", 0.0)))
+                alt = float(raw.get("alt", 20.0))
+                return (lat, lon, alt)
+            raise MissionValidationError(f"Invalid coordinate format for {name}: {raw}")
+
+        mission_id = value.get("mission_id")
+        if not mission_id:
+            import uuid
+            mission_id = f"m-{uuid.uuid4().hex[:8]}"
+
+        dropoff = _parse_coord(value.get("dropoff"), "dropoff")
+        if dropoff is None:
+            raise MissionValidationError("dropoff coordinate is required")
+
+        pickup = _parse_coord(value.get("pickup"), "pickup")
+        if pickup is None:
+            pickup = (dropoff[0], dropoff[1], dropoff[2])
+
+        try:
+            payload_weight = float(value.get("payload_weight_kg", 0.0))
+        except (ValueError, TypeError):
+            payload_weight = 0.0
+
         return cls(
-            mission_id=value["mission_id"],
-            pickup=tuple(value["pickup"]),
-            dropoff=tuple(value["dropoff"]),
-            payload_weight_kg=float(value.get("payload_weight_kg", 0.0)),
+            mission_id=str(mission_id),
+            pickup=pickup,
+            dropoff=dropoff,
+            payload_weight_kg=payload_weight,
             requested_at=value.get("requested_at"),
         )
+
 
 
 class MissionValidationError(Exception):

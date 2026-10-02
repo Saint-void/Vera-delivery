@@ -63,7 +63,7 @@ export function MissionRail({
     return drones.filter((drone) => {
       // Tab filter
       if (filterTab === 'active' && !drone.current_mission_id) return false
-      if (filterTab === 'ready' && (drone.status !== 'available' || needsCharging(drone)))
+      if (filterTab === 'ready' && (!drone.connected || drone.status !== 'available' || needsCharging(drone)))
         return false
       if (filterTab === 'charging' && !needsCharging(drone)) return false
 
@@ -135,7 +135,7 @@ export function MissionRail({
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Ready ({drones.filter((d) => d.status === 'available' && !needsCharging(d)).length})
+            Ready ({drones.filter((d) => d.connected && d.status === 'available' && !needsCharging(d)).length})
           </button>
           <button
             type="button"
@@ -184,6 +184,7 @@ export function MissionRail({
             : undefined
           const telemetry = drone.telemetry
           const isSelected = drone.drone_id === selectedDroneId
+          const isOffline = !drone.connected || drone.status === 'offline'
           const charging = needsCharging(drone)
           const homeLowBattery = hasHomeLowBatteryAlert(drone)
 
@@ -206,8 +207,14 @@ export function MissionRail({
                 <span className="truncate font-mono text-xs font-semibold text-foreground">
                   {droneName(drone)}
                 </span>
-                <span className="shrink-0 rounded border border-border/80 bg-card px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                  {mission ? formatMissionStatus(mission.status) : drone.status}
+                <span
+                  className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider ${
+                    isOffline
+                      ? 'border-critical/50 bg-critical/10 text-critical font-semibold'
+                      : 'border-border/80 bg-card text-muted-foreground'
+                  }`}
+                >
+                  {mission ? formatMissionStatus(mission.status) : (isOffline ? 'OFFLINE' : drone.status)}
                 </span>
               </div>
 
@@ -216,7 +223,7 @@ export function MissionRail({
                 <span className="truncate">{drone.drone_id}</span>
                 <span
                   className={`flex items-center gap-1 ${
-                    charging ? 'font-semibold text-critical' : 'text-foreground/90'
+                    charging ? 'font-semibold text-critical' : isOffline ? 'text-muted-foreground' : 'text-foreground/90'
                   }`}
                 >
                   <Battery size={11} />
@@ -226,21 +233,29 @@ export function MissionRail({
 
               {/* Dynamic Telemetry Badges */}
               <div className="mt-2.5 flex items-center gap-3 text-[10px] font-mono text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Route size={10} />
-                  {telemetry?.altitude_m !== undefined && telemetry?.altitude_m !== null
-                    ? `${telemetry.altitude_m.toFixed(0)}m`
-                    : '0m'}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Activity size={10} />
-                  {telemetry?.flight_mode || 'STANDBY'}
-                </span>
-                {telemetry?.heading_deg !== undefined && telemetry?.heading_deg !== null && (
-                  <span className="flex items-center gap-1">
-                    <Compass size={10} />
-                    {Math.round(telemetry.heading_deg)}°
+                {isOffline ? (
+                  <span className="text-[10px] text-muted-foreground/80 italic">
+                    Offline · No live telemetry
                   </span>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <Route size={10} />
+                      {telemetry?.altitude_m !== undefined && telemetry?.altitude_m !== null
+                        ? `${telemetry.altitude_m.toFixed(0)}m`
+                        : '0m'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Activity size={10} />
+                      {telemetry?.flight_mode || 'STANDBY'}
+                    </span>
+                    {telemetry?.heading_deg !== undefined && telemetry?.heading_deg !== null && (
+                      <span className="flex items-center gap-1">
+                        <Compass size={10} />
+                        {Math.round(telemetry.heading_deg)}°
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
 

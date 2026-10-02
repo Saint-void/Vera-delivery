@@ -51,19 +51,29 @@ class VeraRequestHandler(BaseHTTPRequestHandler):
                 mission, created = self.controller.submit(request)
                 return self._send(202 if created else 200, mission)
             if path == "/commands":
-                result = self.controller.command(body["command"], body.get("mission_id"))
+                command = body.get("command")
+                if not command:
+                    return self._send(400, {"detail": "command is required"})
+                result = self.controller.command(command, body.get("mission_id"))
                 return self._send(200, result)
+            print("[vera-http] Unknown POST route: %s" % path)
             return self._send(404, {"detail": "not found"})
         except MissionValidationError as exc:
+            print("[vera-http] Mission validation rejected: %s" % exc)
             return self._send(400, {"detail": str(exc)})
         except ValueError as exc:
+            print("[vera-http] Value error: %s" % exc)
             return self._send(409, {"detail": str(exc)})
         except KeyError as exc:
-            return self._send(404, {"detail": str(exc)})
+            print("[vera-http] Missing required key: %s" % exc)
+            return self._send(400, {"detail": f"Missing required field: {exc}"})
         except RuntimeError as exc:
+            print("[vera-http] Runtime error: %s" % exc)
             return self._send(503, {"detail": str(exc)})
         except Exception as exc:
+            print("[vera-http] Internal server error: %s" % exc)
             return self._send(500, {"detail": str(exc)})
+
 
 
 def serve(controller=None, host=VERA_HOST, port=VERA_PORT, registrar=None, telemetry_client=None):

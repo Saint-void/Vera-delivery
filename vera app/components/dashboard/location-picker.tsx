@@ -7,7 +7,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { MapPoint } from '@/lib/vella'
 
-const DEFAULT_CENTER: [number, number] = [6.5244, 3.3792]
+const DEFAULT_CENTER: [number, number] = [6.6423, 3.3205]
 
 const pin = L.divIcon({
   className: '',
@@ -16,13 +16,45 @@ const pin = L.divIcon({
   iconAnchor: [10, 20],
 })
 
+function PickerResizer() {
+
+  const map = useMap()
+  useEffect(() => {
+    map.whenReady(() => {
+      map.invalidateSize()
+    })
+    const t = setTimeout(() => {
+      try {
+        map.invalidateSize()
+      } catch {}
+    }, 250)
+    return () => clearTimeout(t)
+  }, [map])
+  return null
+}
+
 function MoveMap({ point }: { point: MapPoint | null }) {
   const map = useMap()
   useEffect(() => {
-    if (point) map.flyTo([point.lat, point.lng], Math.max(map.getZoom(), 15), { duration: 0.45 })
+    if (!point || typeof point.lat !== 'number' || typeof point.lng !== 'number') return
+    if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return
+    const update = () => {
+      try {
+        const center = map.getCenter()
+        const dist = Math.hypot(center.lat - point.lat, center.lng - point.lng)
+        if (dist > 0.0001) {
+          const zoom = Math.max(map.getZoom() || 14, 14)
+          map.setView([point.lat, point.lng], zoom, { animate: false })
+        }
+      } catch {
+        map.setView([point.lat, point.lng], 14, { animate: false })
+      }
+    }
+    map.whenReady(update)
   }, [map, point?.lat, point?.lng])
   return null
 }
+
 
 function ClickToPlace({ onPick }: { onPick: (lat: number, lng: number) => void }) {
   useMapEvents({ click: (event) => onPick(event.latlng.lat, event.latlng.lng) })
@@ -96,12 +128,14 @@ export function LocationPicker({ value, onChange, label }: { value: MapPoint | n
     </div>}
 
     <div className="relative h-72 overflow-hidden border border-border bg-muted">
-      <MapContainer center={center} zoom={value ? 15 : 11} zoomControl={false} className="h-full w-full">
+      <MapContainer center={center} zoom={value ? 15 : 13} zoomControl={false} className="h-full w-full" style={{ width: '100%', height: '100%' }}>
+        <PickerResizer />
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <MoveMap point={value} />
         <ClickToPlace onPick={setFromCoordinates} />
         {value && <Marker position={[value.lat, value.lng]} icon={pin} />}
       </MapContainer>
+
       <div className="pointer-events-none absolute left-3 top-3 z-[500] flex items-center gap-2 border border-white/15 bg-black/80 px-2.5 py-1.5 text-[10px] text-white/80"><MapPin size={12} />Click map to place {label}</div>
       {resolving && <div className="absolute bottom-3 left-3 z-[500] flex items-center gap-2 border border-white/15 bg-black/80 px-2.5 py-1.5 text-[10px] text-white"><LoaderCircle size={12} className="animate-spin" />Finding address…</div>}
       <button type="button" onClick={() => navigator.geolocation?.getCurrentPosition((position) => setFromCoordinates(position.coords.latitude, position.coords.longitude), () => setError('Your current location could not be accessed.'))} className="absolute bottom-3 right-3 z-[500] grid size-8 place-items-center border border-white/15 bg-black/80 text-white/80 hover:text-white" aria-label="Use current location"><Crosshair size={15} /></button>

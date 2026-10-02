@@ -98,6 +98,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw error
   }
 
+  if (response.status === 204) {
+    return undefined as unknown as T
+  }
+
   return response.json() as Promise<T>
 }
 
@@ -140,6 +144,30 @@ export function droneDisplayName(drone: Partial<VellaDrone> | null | undefined):
   return (drone as any).drone_name || drone.metadata?.drone_name || drone.drone_id || 'Unknown'
 }
 
+export const TELEMETRY_STALE_TIMEOUT_MS = 10_000
+
+/**
+ * Determines whether a drone's telemetry is stale or inactive.
+ */
+export function isDroneTelemetryStale(drone: VellaDrone): boolean {
+  if (!drone.connected || drone.status === 'offline') return true
+  const serverSeen = drone.last_seen_at || drone.updated_at
+  if (serverSeen) {
+    const ts = Date.parse(serverSeen)
+    if (!Number.isNaN(ts)) {
+      return Date.now() - ts > TELEMETRY_STALE_TIMEOUT_MS
+    }
+  }
+  const telemTs = drone.telemetry?.timestamp
+  if (telemTs) {
+    const ts = Date.parse(telemTs)
+    if (!Number.isNaN(ts)) {
+      return Date.now() - ts > TELEMETRY_STALE_TIMEOUT_MS
+    }
+  }
+  return false
+}
+
 export async function getFleetSnapshot(): Promise<FleetSnapshot> {
   const [drones, missions] = await Promise.all([
     request<VellaDrone[]>('/drones'),
@@ -164,18 +192,52 @@ function registeredAt(drone: VellaDrone) {
   return Date.parse(drone.last_seen_at || drone.updated_at || '') || 0
 }
 
-/** One Vera HTTP endpoint represents one physical aircraft. */
-export function deduplicateDrones(drones: VellaDrone[]) {
+/**
+ * Deduplicate drones by physical aircraft ID (drone_id).
+ * Resolves conflict by preferring connected over disconnected, then fresher last_seen_at timestamp.
+ */
+export function deduplicateDrones(drones: VellaDrone[]): VellaDrone[] {
   const unique = new Map<string, VellaDrone>()
   for (const drone of drones) {
-    const endpoint = drone.base_url?.replace(/\/$/, '').toLowerCase() || `id:${drone.drone_id}`
-    const current = unique.get(endpoint)
+    const droneId = drone.drone_id
+    if (!droneId) continue
+    const current = unique.get(droneId)
+    if (!current) {
+      unique.set(droneId, drone)
+      continue
+    }
+    // Prefer connected over disconnected
+    if (drone.connected && !current.connected) {
+      unique.set(droneId, drone)
+      continue
+    }
+    if (!drone.connected && current.connected) {
+      continue
+    }
+    // Prefer the more recently updated entry
+    const droneTime = registeredAt(drone)
+    const currentTime = registeredAt(current)
+    if (droneTime > currentTime) {
+      unique.set(droneId, drone)
+      continue
+    }
+    if (currentTime > droneTime) {
+      continue
+    }
+    // If timestamps match, prefer the entry with a configured drone_name
     const currentHasName = Boolean((current as any)?.drone_name || current?.metadata?.drone_name)
     const candidateHasName = Boolean((drone as any)?.drone_name || drone.metadata?.drone_name)
-    const preferCandidate = !current || (candidateHasName && !currentHasName) || (candidateHasName === currentHasName && registeredAt(drone) > registeredAt(current))
-    if (preferCandidate) unique.set(endpoint, drone)
+    if (candidateHasName && !currentHasName) {
+      unique.set(droneId, drone)
+    }
   }
   return [...unique.values()]
+}
+
+export async function deleteDrone(droneId: string): Promise<void> {
+  return request<void>(`/drones/${encodeURIComponent(droneId)}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function createMission(input: {

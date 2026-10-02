@@ -571,6 +571,38 @@ public class FleetOrchestratorService {
         }
     }
 
+    @Scheduled(fixedRate = 2000)
+    public void sweepStaleDrones() {
+        Instant staleThreshold = Instant.now().minusSeconds((long) Math.max(1, staleTimeoutSeconds));
+        List<DroneDocument> drones = droneRepository.findAll();
+        boolean changed = false;
+        for (DroneDocument drone : drones) {
+            if (drone.isConnected() && (drone.getLastSeenAt() == null || drone.getLastSeenAt().isBefore(staleThreshold))) {
+                drone.setConnected(false);
+                drone.setStatus("offline");
+                drone.setUpdatedAt(Instant.now());
+                droneRepository.save(drone);
+                liveDrones.put(drone.getDroneId(), drone);
+                changed = true;
+                log.info("[vella] Drone {} timed out (last seen: {}) — marked offline", drone.getDroneId(), drone.getLastSeenAt());
+            }
+        }
+        if (changed) {
+            notifyFleetChange();
+        }
+    }
+
+    public boolean deleteDrone(String droneId) {
+        if (!droneRepository.existsById(droneId)) {
+            return false;
+        }
+        droneRepository.deleteById(droneId);
+        liveDrones.remove(droneId);
+        notifyFleetChange();
+        log.info("[vella] Drone {} removed from fleet", droneId);
+        return true;
+    }
+
     public void syncAllDrones() {
         // Polls health on registered drones if needed
         List<DroneDocument> drones = droneRepository.findAll();

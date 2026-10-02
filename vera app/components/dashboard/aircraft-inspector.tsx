@@ -36,6 +36,7 @@ type Props = {
   onClose: () => void
   onAssignMission: (droneId: string) => void
   onFocusOnMap?: (coords: [number, number]) => void
+  onDeleteDrone?: (droneId: string) => void
 }
 
 function droneName(drone: VellaDrone) {
@@ -49,6 +50,7 @@ export function AircraftInspector({
   onClose,
   onAssignMission,
   onFocusOnMap,
+  onDeleteDrone,
 }: Props) {
   const [copied, setCopied] = useState(false)
   const [commanding, setCommanding] = useState<string | null>(null)
@@ -56,6 +58,7 @@ export function AircraftInspector({
 
   if (!drone) return null
 
+  const isOffline = !drone.connected || drone.status === 'offline'
   const telemetry = drone.telemetry
   const charging = needsCharging(drone)
   const batteryPct = telemetry?.battery_pct ?? null
@@ -101,11 +104,11 @@ export function AircraftInspector({
           <div className="flex items-center gap-2">
             <span
               className={`size-2 rounded-full ${
-                drone.connected ? 'bg-foreground' : 'bg-critical'
+                !isOffline ? 'bg-emerald-500 animate-pulse' : 'bg-critical'
               }`}
             />
             <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-              {drone.connected ? 'Connected Aircraft' : 'Offline Aircraft'}
+              {!isOffline ? 'Connected Aircraft' : 'Offline Aircraft'}
             </span>
           </div>
           <h2 className="mt-1 truncate font-mono text-base font-semibold tracking-tight text-foreground">
@@ -159,8 +162,8 @@ export function AircraftInspector({
         <div className="border border-border bg-panel p-3">
           <div className="flex items-center justify-between text-[11px]">
             <span className="font-mono uppercase tracking-[0.14em] text-muted-foreground">Status</span>
-            <span className="font-mono font-medium uppercase text-foreground">
-              {drone.status}
+            <span className={`font-mono font-semibold uppercase ${isOffline ? 'text-critical' : 'text-foreground'}`}>
+              {isOffline ? 'OFFLINE' : drone.status}
             </span>
           </div>
 
@@ -199,10 +202,23 @@ export function AircraftInspector({
           </div>
         </div>
 
+        {/* Offline Banner */}
+        {isOffline && (
+          <div className="flex items-start gap-2.5 border border-critical/40 bg-critical/10 p-3 text-foreground">
+            <Radio size={15} className="mt-0.5 shrink-0 text-critical" />
+            <div>
+              <p className="font-medium text-critical">Aircraft Telemetry Inactive</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Vera process is stopped. Flight dynamics below show the last recorded snapshot before disconnection.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Real-time Telemetry Metrics Grid */}
         <section aria-label="Telemetry metrics">
           <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-            Live Flight Dynamics
+            {!isOffline ? 'Live Flight Dynamics' : 'Last Recorded Dynamics (Offline)'}
           </p>
           <div className="grid grid-cols-2 gap-2">
             {/* Battery */}
@@ -287,7 +303,7 @@ export function AircraftInspector({
                 Link
               </span>
               <p className="mt-1.5 truncate font-mono text-xs font-semibold text-foreground">
-                {drone.connected ? 'Vera MAVLink' : 'No Signal'}
+                {!isOffline ? 'Vera MAVLink' : 'Disconnected'}
               </p>
             </div>
           </div>
@@ -378,10 +394,24 @@ export function AircraftInspector({
           </div>
         </section>
 
-        {/* Vera Process Endpoint Info */}
-        <div className="border-t border-border pt-4 text-[10px] text-muted-foreground">
-          <p className="font-mono uppercase tracking-[0.14em]">Vera Process Endpoint</p>
-          <p className="mt-1 break-all font-mono text-foreground/80">{drone.base_url}</p>
+        {/* Vera Process Endpoint Info & Fleet Deregistration */}
+        <div className="border-t border-border pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1 text-[10px] text-muted-foreground">
+              <p className="font-mono uppercase tracking-[0.14em]">Vera Process Endpoint</p>
+              <p className="mt-1 truncate font-mono text-foreground/80">{drone.base_url}</p>
+            </div>
+            {onDeleteDrone && (
+              <button
+                type="button"
+                onClick={() => onDeleteDrone(drone.drone_id)}
+                className="shrink-0 rounded border border-critical/40 bg-critical/10 px-2.5 py-1.5 font-mono text-[10px] font-medium text-critical hover:bg-critical/20 transition-colors"
+                title="Remove this aircraft from fleet registry"
+              >
+                Deregister
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </aside>

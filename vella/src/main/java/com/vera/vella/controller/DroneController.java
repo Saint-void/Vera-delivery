@@ -67,4 +67,10 @@ public class DroneController {
         orchestrator.sendCommand(droneId, request.command().toLowerCase(), request.missionId());
         return Map.of("status", request.command().toLowerCase() + "_requested");
     }
+
+    @DeleteMapping("/{drone_id}")
+    public ResponseEntity<Void> deleteDrone(@PathVariable("drone_id") String droneId) {
+        boolean deleted = orchestrator.deleteDrone(droneId);
+        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
 }
