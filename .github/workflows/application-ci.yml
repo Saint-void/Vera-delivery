@@ -1,0 +1,83 @@
+name: Application CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  vella-test:
+    name: Vella Backend Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: vella
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Run Vella tests
+        run: ./mvnw test
+
+  vera-test:
+    name: Vera Companion Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: vera
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Check Python compilation
+        run: python -m compileall .
+
+  vera-app-build:
+    name: Vera Dashboard Build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: vera app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js application
+        run: pnpm build
