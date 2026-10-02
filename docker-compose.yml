@@ -1,0 +1,39 @@
+services:
+  mongodb:
+    image: mongo:7
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: vella_fleet
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  vella:
+    build:
+      context: ./vella
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/vella_fleet
+    depends_on:
+      - mongodb
+
+  vera-app:
+    build:
+      context: ./vera app
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      VELLA_API_URL: http://vella:8000
+    depends_on:
+      - vella
+
+volumes:
+  mongo_data:
