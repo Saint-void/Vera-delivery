@@ -1,0 +1,52 @@
+name: Docker CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-vella:
+    name: Build Vella Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Vella image
+        run: |
+          docker build \
+            -t vella:test \
+            ./vella
+
+  build-vera:
+    name: Build Vera Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Vera image
+        run: |
+          docker build \
+            -t vera:test \
+            ./vera
+
+  build-vera-app:
+    name: Build Vera App Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Vera App image
+        run: |
+          docker build \
+            -t vera-app:test \
+            "./vera app"
