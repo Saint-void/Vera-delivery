@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: vella-fleet
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: vera-delivery-system
+      app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - mongodb/statefulset.yaml
+  - mongodb/service.yaml
+  - vella/deployment.yaml
+  - vella/service.yaml
+  - vella/hpa.yaml
+  - vera-app/deployment.yaml
+  - vera-app/service.yaml
+  - vera-app/hpa.yaml
+  - vera-companion/deployment.yaml
+  - vera-companion/service.yaml
+  - ingress/ingress.yaml

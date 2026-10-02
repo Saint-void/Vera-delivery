@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vella
+  namespace: vella-fleet
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vera-app
+  namespace: vella-fleet
+spec:
+  replicas: 1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fleet-config
+  namespace: vella-fleet
+data:
+  LOG_LEVEL: "DEBUG"

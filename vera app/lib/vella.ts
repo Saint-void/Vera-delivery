@@ -252,7 +252,7 @@ export async function createMission(input: {
     body: JSON.stringify({
       mission_id: missionId,
       ...(input.droneId ? { drone_id: input.droneId } : {}),
-      dropoff: { lat: input.dropoff.lat, lon: input.dropoff.lng, alt: input.dropoff.alt },
+      dropoff: { lat: input.dropoff.lat, lon: input.dropoff.lng, lng: input.dropoff.lng, alt: input.dropoff.alt },
       payload_weight_kg: input.payloadWeightKg,
     }),
   })

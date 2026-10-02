@@ -25,9 +25,49 @@ class VeraRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _read_chunked(self):
+        chunks = []
+        while True:
+            line = self.rfile.readline()
+            if not line:
+                break
+            chunk_len_str = line.split(b";")[0].strip()
+            if not chunk_len_str:
+                continue
+            try:
+                chunk_len = int(chunk_len_str, 16)
+            except ValueError:
+                break
+            if chunk_len == 0:
+                while True:
+                    trailer = self.rfile.readline()
+                    if not trailer or trailer.strip() == b"":
+                        break
+                break
+            chunk_data = self.rfile.read(chunk_len)
+            chunks.append(chunk_data)
+            self.rfile.read(2)  # consume trailing \r\n
+        return b"".join(chunks)
+
     def _body(self):
-        length = int(self.headers.get("Content-Length", "0"))
-        return json.loads(self.rfile.read(length) or b"{}")
+        transfer_encoding = self.headers.get("Transfer-Encoding", "").lower()
+        if "chunked" in transfer_encoding:
+            raw = self._read_chunked()
+        else:
+            length_header = self.headers.get("Content-Length")
+            if length_header is not None:
+                length = int(length_header)
+                raw = self.rfile.read(length) if length > 0 else b""
+            else:
+                raw = b""
+
+        if not raw:
+            return {}
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except Exception as exc:
+            print("[vera-http] JSON parse error: %s (raw=%r)" % (exc, raw[:100]))
+            return {}
 
     def do_GET(self):
         path = urlparse(self.path).path.rstrip("/")
@@ -47,6 +87,7 @@ class VeraRequestHandler(BaseHTTPRequestHandler):
         try:
             body = self._body()
             if path == "/missions":
+                print("[vera-http] POST /missions payload: %s" % body)
                 request = MissionRequest.from_dict(body)
                 mission, created = self.controller.submit(request)
                 return self._send(202 if created else 200, mission)

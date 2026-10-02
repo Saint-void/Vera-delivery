@@ -35,5 +35,24 @@ services:
     depends_on:
       - vella
 
+  vera:
+    build:
+      context: .
+      dockerfile: vera/Dockerfile
+    restart: always
+    ports:
+      - "8765:8765"
+    environment:
+      VERA_HOST: 0.0.0.0
+      VERA_PORT: 8765
+      VERA_DRONE_ID: VERA_001
+      VERA_DRONE_NAME: VERA-001
+      VELLA_BASE_URL: http://vella:8000
+      VERA_CONNECTION_STRING: udp:127.0.0.1:14551
+      VERA_HOME_POSITION: 6.642361,3.320583,20
+    depends_on:
+      - vella
+
 volumes:
   mongo_data:
+

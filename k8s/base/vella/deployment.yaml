@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vella
+  namespace: vella-fleet
+  labels:
+    app.kubernetes.io/name: vella
+    app.kubernetes.io/component: fleet-backend
+    app.kubernetes.io/part-of: vera-delivery-system
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vella
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vella
+        app.kubernetes.io/component: fleet-backend
+        app.kubernetes.io/part-of: vera-delivery-system
+    spec:
+      containers:
+        - name: vella
+          image: ghcr.io/saint-void/vera-delivery/vella:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: fleet-config
+                  key: PORT
+            - name: SPRING_DATA_MONGODB_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: fleet-config
+                  key: SPRING_DATA_MONGODB_URI
+            - name: VELLA_MISSION_MIN_BATTERY_PCT
+              valueFrom:
+                configMapKeyRef:
+                  name: fleet-config
+                  key: VELLA_MISSION_MIN_BATTERY_PCT
+            - name: VELLA_TELEMETRY_STALE_TIMEOUT_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  name: fleet-config
+                  key: VELLA_TELEMETRY_STALE_TIMEOUT_SECONDS
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8000
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8000
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2

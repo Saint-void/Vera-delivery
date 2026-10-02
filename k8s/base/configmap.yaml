@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fleet-config
+  namespace: vella-fleet
+  labels:
+    app.kubernetes.io/name: fleet-config
+    app.kubernetes.io/part-of: vera-delivery-system
+data:
+  # Vella Fleet Backend Config
+  PORT: "8000"
+  MONGODB_DATABASE: "vella_fleet"
+  SPRING_DATA_MONGODB_URI: "mongodb://mongodb.vella-fleet.svc.cluster.local:27017/vella_fleet"
+  VELLA_MISSION_MIN_BATTERY_PCT: "40"
+  VELLA_TELEMETRY_STALE_TIMEOUT_SECONDS: "5.0"
+  
+  # Vera Operations Dashboard Config
+  VELLA_API_URL: "http://vella.vella-fleet.svc.cluster.local:8000"
+  GEOCODER_USER_AGENT: "Vella-Operations-Dashboard/1.0 (fleet-admin@vera.aero)"
+
+  # Vera Drone Companion Config
+  VERA_HOST: "0.0.0.0"
+  VERA_PORT: "8765"
+  VERA_DRONE_ID: "VERA_001"
+  VERA_DRONE_NAME: "Vera SkyCourier Alpha"
+  VELLA_BASE_URL: "http://vella.vella-fleet.svc.cluster.local:8000"
+  VERA_CONNECTION_STRING: "udp:127.0.0.1:14551"
+  VERA_HOME_POSITION: "6.642361,3.320583,20"
