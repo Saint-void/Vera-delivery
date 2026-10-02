@@ -50,6 +50,7 @@ interface BasemapDef {
   name: string
   label: string
   url: string
+  subdomains?: string
   attribution: string
   maxZoom: number
 }
@@ -59,7 +60,8 @@ const BASEMAP_TILES: Record<BasemapId, BasemapDef> = {
     id: 'dark',
     name: 'Dark Tactical',
     label: 'Dark',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    subdomains: 'abcd',
     attribution:
       '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 20,
@@ -69,6 +71,7 @@ const BASEMAP_TILES: Record<BasemapId, BasemapDef> = {
     name: 'Satellite Recon',
     label: 'Sat',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    subdomains: 'abc',
     attribution:
       'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
     maxZoom: 19,
@@ -77,12 +80,14 @@ const BASEMAP_TILES: Record<BasemapId, BasemapDef> = {
     id: 'streets',
     name: 'Clean Streets',
     label: 'Street',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    subdomains: 'abcd',
     attribution:
       '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 20,
   },
 }
+
 
 // ─── GEOFENCE DEFINITION ─────────────────────────────────────────────────────
 
@@ -407,6 +412,25 @@ function CursorCoordinateTracker({
   return null
 }
 
+function MapResizer() {
+  const map = useMap()
+  useEffect(() => {
+    map.invalidateSize()
+    const t1 = setTimeout(() => map.invalidateSize(), 150)
+    const t2 = setTimeout(() => map.invalidateSize(), 600)
+    const onResize = () => map.invalidateSize()
+    window.addEventListener('resize', onResize)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [map])
+  return null
+}
+
+const DEFAULT_MAP_CENTER: [number, number] = [6.6423, 3.3205]
+
 function positionFrom(
   lat: number | null | undefined,
   lng: number | null | undefined
@@ -453,11 +477,13 @@ export function MapView({
   // Breadcrumb trajectory history (rolling buffer per drone)
   const breadcrumbsRef = useRef<Record<string, [number, number][]>>({})
 
-  // Compute live visible drones with valid coordinates
+  // Compute live visible drones with valid coordinates, falling back to home position if waiting on telemetry
   const visibleDrones = useMemo(() => {
     return drones.flatMap((drone) => {
       if (!drone.connected) return []
-      const position = positionFrom(drone.telemetry?.latitude, drone.telemetry?.longitude)
+      const pos = positionFrom(drone.telemetry?.latitude, drone.telemetry?.longitude)
+      const home = parseCoordinate(drone.home_position as any)
+      const position = pos || (home ? ([home[0], home[1]] as [number, number]) : null)
       return position ? [{ drone, position }] : []
     })
   }, [drones])
@@ -486,28 +512,47 @@ export function MapView({
   const selectedDroneItem = visibleDrones.find((d) => d.drone.drone_id === selectedDroneId)
   const selectedDronePos = selectedDroneItem?.position
 
-  const center: [number, number] = allPositions[0] 
+  const center: [number, number] = useMemo(() => {
+    if (allPositions.length > 0 && allPositions[0]) {
+      return allPositions[0]
+    }
+    for (const drone of drones) {
+      const home = parseCoordinate(drone.home_position as any)
+      if (home) return [home[0], home[1]]
+    }
+    if (selectedMission?.pickup) {
+      const p = parseCoordinate(selectedMission.pickup as any)
+      if (p) return [p[0], p[1]]
+    }
+    return DEFAULT_MAP_CENTER
+  }, [allPositions, drones, selectedMission])
+
   // Layer toggle menu state
   const [layersMenuOpen, setLayersMenuOpen] = useState(false)
 
   return (
     <section
-      className="relative h-full min-h-[500px] flex-1 overflow-hidden bg-[#0a0d0f]"
+      className="relative h-full min-h-[500px] w-full flex-1 overflow-hidden bg-[#0a0d0f]"
       aria-label="Tactical airspace map"
     >
       <MapContainer
         center={center}
         zoom={13}
         zoomControl={false}
-        className="h-full w-full"
+        className="h-full w-full min-h-[500px]"
+        style={{ height: '100%', width: '100%' }}
       >
+        <MapResizer />
+
         {/* Dynamic Basemap Tile Layer */}
         <TileLayer
           key={activeBasemap}
           attribution={BASEMAP_TILES[activeBasemap].attribution}
           url={BASEMAP_TILES[activeBasemap].url}
+          subdomains={BASEMAP_TILES[activeBasemap].subdomains || 'abcd'}
           maxZoom={BASEMAP_TILES[activeBasemap].maxZoom}
         />
+
 
         <MapCameraController
           focusCoords={focusCoords}

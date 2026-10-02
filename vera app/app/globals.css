@@ -288,3 +288,12 @@ html, body { margin: 0; padding: 0; height: 100%; background: #0b0d0f; }
 
 .dark { --background: #0b0d0f; --foreground: #e7edf0; --card: #141719; --card-foreground: #e7edf0; --popover: #141719; --popover-foreground: #e7edf0; --primary: #d4d4d4; --primary-foreground: #061115; --secondary: #1c2124; --secondary-foreground: #e7edf0; --muted: #1c2124; --muted-foreground: #7e8b91; --accent: #1c2124; --accent-foreground: #e7edf0; --border: #252c30; --input: #252c30; --ring: #d4d4d4; }
 
+/* Ensure Leaflet container fills parent correctly */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  background-color: #0a0d0f !important;
+}
+
+

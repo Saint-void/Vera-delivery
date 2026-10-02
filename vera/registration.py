@@ -85,13 +85,20 @@ class VellaRegistrar:
             response = self.session.post(
                 self.base_url + VELLA_REGISTRATION_PATH,
                 json=registration_payload(self.controller),
+                headers={"Connection": "close"},
                 timeout=self.timeout_s,
             )
             response.raise_for_status()
             return response.json()
         except requests.RequestException as exc:
             print("Vera could not register with Vella: %s" % exc)
+            try:
+                self.session.close()
+            except Exception:
+                pass
+            self.session = requests.Session()
             return None
+
 
     def start(self):
         if not self.enabled or (self._thread and self._thread.is_alive()):
