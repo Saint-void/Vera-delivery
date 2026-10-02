@@ -63,6 +63,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -70,8 +76,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: 'vera app/pnpm-lock.yaml'
 
-      - name: Enable pnpm
-        run: corepack enable
+      - name: Check versions
+        run: |
+          node --version
+          pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
