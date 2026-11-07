@@ -1,0 +1,106 @@
+name: CI - Test & Validate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vella-backend:
+    name: Vella Backend Tests (Spring Boot)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vella
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Run Maven Tests
+        run: ./mvnw test
+
+  vera-companion:
+    name: Vera Companion Check (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vera
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies (if available)
+        run: |
+          if [ -f ../requirements.txt ]; then
+            pip install -r ../requirements.txt
+          fi
+
+      - name: Check Python compilation
+        run: python -m compileall .
+
+  vera-dashboard:
+    name: Vera Dashboard Build (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vera app
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: 'vera app/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js Application
+        run: pnpm build
+
+  k8s-validate:
+    name: Kubernetes Manifests Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.31.0
+
+      - name: Validate Development Overlay
+        run: kubectl kustomize ./k8s/overlays/dev > /dev/null
+
+      - name: Validate Production Overlay
+        run: kubectl kustomize ./k8s/overlays/prod > /dev/null
+
