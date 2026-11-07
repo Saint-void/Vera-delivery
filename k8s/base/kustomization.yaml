@@ -12,8 +12,9 @@ resources:
   - namespace.yaml
   - configmap.yaml
   - secrets.yaml
-  - mongodb/statefulset.yaml
-  - mongodb/service.yaml
+  # MongoDB Atlas is used (uncomment lines below only if running self-hosted MongoDB in-cluster)
+  # - mongodb/statefulset.yaml
+  # - mongodb/service.yaml
   - vella/deployment.yaml
   - vella/service.yaml
   - vella/hpa.yaml

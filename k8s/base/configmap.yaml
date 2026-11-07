@@ -10,7 +10,7 @@ data:
   # Vella Fleet Backend Config
   PORT: "8000"
   MONGODB_DATABASE: "vella_fleet"
-  SPRING_DATA_MONGODB_URI: "mongodb://mongodb.vella-fleet.svc.cluster.local:27017/vella_fleet"
+  SPRING_DATA_MONGODB_URI: "mongodb+srv://vella_fleet:Donaldefe1.@vella-fleet.erxpw0f.mongodb.net/vella_fleet?retryWrites=true&w=majority"
   VELLA_MISSION_MIN_BATTERY_PCT: "40"
   VELLA_TELEMETRY_STALE_TIMEOUT_SECONDS: "5.0"
   
