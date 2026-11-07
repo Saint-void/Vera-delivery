@@ -240,12 +240,26 @@ export async function deleteDrone(droneId: string): Promise<void> {
   })
 }
 
+function generateShortId(): string {
+  if (typeof crypto !== 'undefined') {
+    if (typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID().slice(0, 8).toUpperCase()
+    }
+    if (typeof crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(4)
+      crypto.getRandomValues(bytes)
+      return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase()
+    }
+  }
+  return Math.random().toString(36).substring(2, 10).toUpperCase()
+}
+
 export async function createMission(input: {
   droneId?: string
   dropoff: Coordinate
   payloadWeightKg: number
 }): Promise<VellaMission> {
-  const missionId = `WEB-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
+  const missionId = `WEB-${generateShortId()}`
   return request<VellaMission>('/missions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

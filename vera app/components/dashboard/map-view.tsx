@@ -177,18 +177,15 @@ function createTacticalDroneIcon(
   const reticleHtml = isSelected
     ? `
       <div class="pointer-events-none absolute -inset-3.5 flex items-center justify-center" style="z-index: 60;">
-        <!-- Pulsing target radar circle -->
-        <div class="absolute inset-0 rounded-full border-2 animate-ping" style="border-color: ${theme.stroke}; box-shadow: 0 0 24px ${theme.stroke}; opacity: 0.65;"></div>
         <!-- Spinning compass azimuth ring -->
-        <div class="absolute inset-0 rounded-full border border-dashed animate-spin" style="border-color: #ffffff; animation-duration: 9s; opacity: 0.85;"></div>
+        <div class="absolute inset-0 rounded-full border border-dashed animate-spin" style="border-color: #ffffff; animation-duration: 9s; opacity: 0.75;"></div>
         <!-- 4 High-contrast tactical corner brackets -->
-        <div class="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2" style="border-color: #ffffff; filter: drop-shadow(0 0 5px ${theme.stroke});"></div>
-        <div class="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2" style="border-color: #ffffff; filter: drop-shadow(0 0 5px ${theme.stroke});"></div>
-        <div class="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2" style="border-color: #ffffff; filter: drop-shadow(0 0 5px ${theme.stroke});"></div>
-        <div class="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2" style="border-color: #ffffff; filter: drop-shadow(0 0 5px ${theme.stroke});"></div>
+        <div class="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-white/80"></div>
+        <div class="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-white/80"></div>
+        <div class="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-white/80"></div>
+        <div class="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-white/80"></div>
         <!-- Target Locked Badge -->
-        <div class="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[8px] font-mono font-black tracking-widest uppercase whitespace-nowrap"
-             style="background: #080c10; color: ${theme.stroke}; border: 1px solid ${theme.stroke}; box-shadow: 0 0 10px rgba(0,0,0,0.9);">
+        <div class="absolute -top-7 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold tracking-widest uppercase whitespace-nowrap bg-zinc-950 text-zinc-200 border border-zinc-700 shadow-md">
           TARGET LOCKED
         </div>
       </div>
@@ -231,67 +228,57 @@ function createTacticalDroneIcon(
       <div class="relative flex items-center justify-center cursor-pointer select-none" style="width: 60px; height: 60px;">
         ${reticleHtml}
 
-        <!-- 1. Ambient Radar Pulse Wave (Continuous Locator Beacon) -->
-        <div class="animate-radar pointer-events-none absolute"
-             style="left: 50%; top: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 9999px; border: 2px solid ${theme.stroke}; box-shadow: 0 0 16px ${theme.stroke};"></div>
-
-        <!-- 2. Concentric Tactical Range Disc -->
-        <div class="pointer-events-none absolute"
-             style="left: 50%; top: 50%; transform: translate(-50%, -50%); width: 48px; height: 48px; border-radius: 9999px; border: 1.5px dashed rgba(${theme.rgb}, 0.7); background: radial-gradient(circle, rgba(${theme.rgb}, 0.22) 0%, rgba(${theme.rgb}, 0.04) 65%, transparent 100%); box-shadow: ${theme.glow};"></div>
-
-        <!-- 3. Rotating Fuselage, Vector & Heading Cone -->
+        <!-- Rotating Fuselage, Vector & Heading Cone -->
         <div class="relative flex items-center justify-center"
              style="width: 60px; height: 60px; transform: rotate(${heading}deg); transition: transform 0.25s ease-out;">
           
           <!-- Forward Flight Vector Beam -->
           <div class="pointer-events-none absolute"
-               style="bottom: 30px; left: 50%; transform: translateX(-50%); width: 3px; height: 32px; background: linear-gradient(to top, ${theme.stroke} 0%, rgba(${theme.rgb}, 0.8) 50%, transparent 100%); box-shadow: 0 0 10px ${theme.stroke};"></div>
+               style="bottom: 30px; left: 50%; transform: translateX(-50%); width: 2px; height: 24px; background: linear-gradient(to top, rgba(255,255,255,0.7), transparent);"></div>
           
           <!-- Forward Flight Arrowhead Chevron -->
           <div class="pointer-events-none absolute"
-               style="top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid ${theme.stroke}; filter: drop-shadow(0 0 6px ${theme.stroke});"></div>
+               style="top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 7px solid #ffffff; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));"></div>
 
-          <!-- Quadcopter Airframe SVG (High-Contrast Tactical Spec) -->
-          <svg viewBox="0 0 48 48" style="width: 44px; height: 44px; filter: drop-shadow(${theme.glow}) drop-shadow(0 2px 6px rgba(0,0,0,0.9));">
-            <!-- Dark Composite Foundation Shield (Guarantees contrast on all map types) -->
-            
-            <!-- Heavy-Duty Structural Crossarms (Carbon Core + Titanium Trim) -->
-            <line x1="9" y1="9" x2="39" y2="39" stroke="#000000" stroke-width="5" stroke-linecap="round" />
-            <line x1="9" y1="9" x2="39" y2="39" stroke="#f1f5f9" stroke-width="2.6" stroke-linecap="round" />
-            <line x1="39" y1="9" x2="9" y2="39" stroke="#000000" stroke-width="5" stroke-linecap="round" />
-            <line x1="39" y1="9" x2="9" y2="39" stroke="#f1f5f9" stroke-width="2.6" stroke-linecap="round" />
+          <!-- Quadcopter Airframe SVG (Clean High-Contrast Spec) -->
+          <svg viewBox="0 0 48 48" style="width: 44px; height: 44px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.85));">
+            <!-- Heavy-Duty Structural Crossarms -->
+            <line x1="9" y1="9" x2="39" y2="39" stroke="#000000" stroke-width="4.5" stroke-linecap="round" />
+            <line x1="9" y1="9" x2="39" y2="39" stroke="#e2e8f0" stroke-width="2.2" stroke-linecap="round" />
+            <line x1="39" y1="9" x2="9" y2="39" stroke="#000000" stroke-width="4.5" stroke-linecap="round" />
+            <line x1="39" y1="9" x2="9" y2="39" stroke="#e2e8f0" stroke-width="2.2" stroke-linecap="round" />
 
-            <!-- 4 Rotor Discs with active spinning visual appearance -->
+            <!-- 4 Rotor Discs with clean neutral appearance -->
             <!-- Front-Left Rotor -->
-            <circle cx="9" cy="9" r="6.2" fill="rgba(${theme.rgb}, 0.35)" stroke="${theme.stroke}" stroke-width="1.8" />
+            <circle cx="9" cy="9" r="6.2" fill="rgba(255,255,255,0.06)" stroke="#64748b" stroke-width="1.4" />
             <line x1="5" y1="9" x2="13" y2="9" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
             <line x1="9" y1="5" x2="9" y2="13" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
-            <circle cx="9" cy="9" r="2.2" fill="#ffffff" filter="drop-shadow(0 0 3px #ffffff)" />
+            <circle cx="9" cy="9" r="2.2" fill="#ffffff" filter="drop-shadow(0 0 2px #ffffff)" />
 
             <!-- Front-Right Rotor -->
-            <circle cx="39" cy="9" r="6.2" fill="rgba(${theme.rgb}, 0.35)" stroke="${theme.stroke}" stroke-width="1.8" />
+            <circle cx="39" cy="9" r="6.2" fill="rgba(255,255,255,0.06)" stroke="#64748b" stroke-width="1.4" />
             <line x1="35" y1="9" x2="43" y2="9" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
             <line x1="39" y1="5" x2="39" y2="13" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
-            <circle cx="39" cy="9" r="2.2" fill="#ffffff" filter="drop-shadow(0 0 3px #ffffff)" />
+            <circle cx="39" cy="9" r="2.2" fill="#ffffff" filter="drop-shadow(0 0 2px #ffffff)" />
 
             <!-- Rear-Left Rotor (FAA Red Aviation Position Marker) -->
-            <circle cx="9" cy="39" r="6.2" fill="rgba(${theme.rgb}, 0.35)" stroke="${theme.stroke}" stroke-width="1.8" />
+            <circle cx="9" cy="39" r="6.2" fill="rgba(255,255,255,0.06)" stroke="#64748b" stroke-width="1.4" />
             <line x1="5" y1="39" x2="13" y2="39" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" />
             <line x1="9" y1="35" x2="9" y2="43" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" />
-            <circle cx="9" cy="39" r="2.2" fill="#ff4d4f" filter="drop-shadow(0 0 3px #ff4d4f)" />
+            <circle cx="9" cy="39" r="2.2" fill="#ef4444" />
 
             <!-- Rear-Right Rotor (FAA Amber Aviation Position Marker) -->
-            <circle cx="39" cy="39" r="6.2" fill="rgba(${theme.rgb}, 0.35)" stroke="${theme.stroke}" stroke-width="1.8" />
+            <circle cx="39" cy="39" r="6.2" fill="rgba(255,255,255,0.06)" stroke="#64748b" stroke-width="1.4" />
             <line x1="35" y1="39" x2="43" y2="39" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" />
             <line x1="39" y1="35" x2="39" y2="43" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" />
-            <circle cx="39" cy="39" r="2.2" fill="#ffab00" filter="drop-shadow(0 0 3px #ffab00)" />
+            <circle cx="39" cy="39" r="2.2" fill="#f59e0b" />
 
-            <!-- Aerodynamic Fuselage Core (Directional Arrow Pod) -->
-            <polygon points="24,11 31,23 27,31 21,31 17,23" fill="#0a0e14" stroke="${theme.stroke}" stroke-width="2" />
-            <polygon points="24,14 28,23 24,26 20,23" fill="${theme.stroke}" />
+            <!-- Aerodynamic Fuselage Core -->
+            <polygon points="24,11 31,23 27,31 21,31 17,23" fill="#0f172a" stroke="#475569" stroke-width="1.8" />
+            <polygon points="24,14 28,23 24,26 20,23" fill="#38bdf8" />
             
-            <!-- Central High-Intensity Anti-Collision White Strobe -->
-            <circle cx="24" cy="22" r="2.6" fill="#ffffff" filter="drop-shadow(0 0 6px #ffffff)" />
+            <!-- Central Anti-Collision White Strobe -->
+            <circle cx="24" cy="22" r="2.4" fill="#ffffff" />
           </svg>
         </div>
 
